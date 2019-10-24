@@ -38,6 +38,22 @@
 #include "mem/ruby/network/garnet2.0/Router.hh"
 #include "mem/ruby/slicc_interface/Message.hh"
 
+PortDirection
+RoutingUnit::compute_dirn(int index)
+{
+	switch(index){
+	    case 0:
+    		return "North";
+    	case 1:
+	    	return "East";
+	    case 2:
+	    	return "West";
+    	case 3:
+    	return "South";
+    }
+    return "Unknown";
+}
+
 RoutingUnit::RoutingUnit(Router *router)
 {
     m_router = router;
@@ -237,6 +253,106 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
                                  int inport,
                                  PortDirection inport_dirn)
 {
-    assert(0);
-    return -1;
+    //assert(0);
+    PortDirection outport_dirn = "Unknown";
+
+    int avail_dimension_set[] = {0,0,0,0};
+    						// N, E, W, S
+
+    int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+    assert(num_rows > 0 && num_cols > 0);
+
+    int my_id = m_router->get_id();
+    int cx = my_id % num_cols;
+    int cy = my_id / num_cols;
+
+    int dest_id = route.dest_router;
+    int dx = dest_id % num_cols;
+    int dy = dest_id / num_cols;
+
+    int source_id = route.src_router;
+    int sx = source_id % num_cols;
+    //int sy = source_id / num_cols;
+    //		unused var
+
+    int ex = (dx - cx);
+    int ey = (dy - cy);
+
+    // already checked that in outportCompute() function
+    assert(!(ex == 0 && ey == 0));
+    if(ex == 0){
+    	if(ey < 0){
+    		avail_dimension_set[3]++;
+    	}
+    	else{
+    		avail_dimension_set[0]++;
+    	}
+    }
+    else{
+    		if(ex > 0){   //Eastbound
+    			if(ey == 0){     //in same row as destination
+    				avail_dimension_set[1]++;
+    			}
+    			else{
+    				if((cx % 2 != 0)||(cx == sx)){
+    					if(ey < 0){
+    						avail_dimension_set[3]++;
+    					}
+    					else{
+    						avail_dimension_set[0]++;
+    					}
+    				}
+    				if((dx % 2 != 0)|| (ex != 1)){
+    					avail_dimension_set[1]++;
+    				}
+    			}
+    		}
+    		else{
+    			avail_dimension_set[2]++;
+    			if(cx % 2 == 0){
+    				if(ey < 0){
+    						avail_dimension_set[3]++;
+    					}
+    					else if(ey > 0){
+    						avail_dimension_set[0]++;
+    					}
+    			}
+    		}
+
+    }
+    int dir_count = 0;
+    printf("S %d\tD %d\tC %d\t going to ",source_id,dest_id,my_id);
+    for(int i=0;i<4;i++){
+    	dir_count += avail_dimension_set[i];
+
+    	if(avail_dimension_set[i]){		//handles dir_count = 1 case
+    		outport_dirn = this->compute_dirn(i);
+    	}
+        if(avail_dimension_set[i]>0){
+            //printf("S %d D %d Router: %d\t going to %s\n",source_id,dest_id,my_id,(this->compute_dirn(i)).c_str());
+            printf("%s ",(this->compute_dirn(i)).c_str());
+        }
+    }
+    
+    if(dir_count == 2){
+    	int i1 = -1,i2 = -1;
+    	for(int i=0;i<4;i++){
+    		if(avail_dimension_set[i] > 0){
+    			if(i1 == -1) i1 = i;
+    			else i2 = i;
+    		}
+    	}
+    	std::srand(std::time(nullptr));
+    	int random_var = std::rand();
+    	if(random_var % 2 == 0){
+    		outport_dirn = this->compute_dirn(i1);
+    	}
+    	else{
+    		outport_dirn = this->compute_dirn(i2);
+    	}
+        printf("-- %s",outport_dirn.c_str());
+    }
+    printf("\n");
+    return m_outports_dirn2idx[outport_dirn];
 }
