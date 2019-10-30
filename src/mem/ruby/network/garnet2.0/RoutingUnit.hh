@@ -77,6 +77,10 @@ class RoutingUnit
                              int inport,
                              PortDirection inport_dirn);
     
+    int outportComputeWestFirst(RouteInfo route,
+                             int inport,
+                             PortDirection inport_dirn);
+    
     PortDirection compute_dirn(int index);
   private:
     Router *m_router;
