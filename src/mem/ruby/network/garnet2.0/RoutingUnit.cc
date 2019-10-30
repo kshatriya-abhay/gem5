@@ -177,8 +177,10 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
         case XY_:     outport =
             outportComputeXY(route, inport, inport_dirn); break;
         // any custom algorithm
-        case CUSTOM_: outport =
-            outportComputeCustom(route, inport, inport_dirn); break;
+        case ODDEVEN_: outport =
+            outportComputeOddEven(route, inport, inport_dirn); break;
+        case NORTHLAST_ : outport =
+            outportComputeNorthLast(route, inport, inport_dirn); break;
         default: outport =
             lookupRoutingTable(route.vnet, route.net_dest); break;
     }
@@ -249,7 +251,7 @@ RoutingUnit::outportComputeXY(RouteInfo route,
 // Template for implementing custom routing algorithm
 // using port directions. (Example adaptive)
 int
-RoutingUnit::outportComputeCustom(RouteInfo route,
+RoutingUnit::outportComputeOddEven(RouteInfo route,
                                  int inport,
                                  PortDirection inport_dirn)
 {
@@ -281,6 +283,8 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
 
     // already checked that in outportCompute() function
     assert(!(ex == 0 && ey == 0));
+    
+    //  ****** Odd-Even *****
     if(ex == 0){
     	if(ey < 0){
     		avail_dimension_set[3]++;
@@ -321,6 +325,7 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
     		}
 
     }
+    //  **** End of Odd-even
     int dir_count = 0;
     printf("S %d\tD %d\tC %d\t going to ",source_id,dest_id,my_id);
     for(int i=0;i<4;i++){
@@ -354,5 +359,92 @@ RoutingUnit::outportComputeCustom(RouteInfo route,
         printf("-- %s",outport_dirn.c_str());
     }
     printf("\n");
+    
+    return m_outports_dirn2idx[outport_dirn];
+}
+int
+RoutingUnit::outportComputeNorthLast(RouteInfo route,
+                                 int inport,
+                                 PortDirection inport_dirn)
+{
+    //assert(0);
+    PortDirection outport_dirn = "Unknown";
+
+    int avail_dimension_set[] = {0,0,0,0};
+                            // N, E, W, S
+
+    int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+    assert(num_rows > 0 && num_cols > 0);
+
+    int my_id = m_router->get_id();
+    int cx = my_id % num_cols;
+    int cy = my_id / num_cols;
+
+    int dest_id = route.dest_router;
+    int dx = dest_id % num_cols;
+    int dy = dest_id / num_cols;
+
+    int source_id = route.src_router;
+    
+    int ex = (dx - cx);
+    int ey = (dy - cy);
+
+    // already checked that in outportCompute() function
+    assert(!(ex == 0 && ey == 0));
+    
+    //  North-last algo
+    if(ey >= 0)  //We need to go North
+    {
+        if(ex == 0)     //We can only go north
+        {
+            avail_dimension_set[0]++;
+        }
+        else        //We can go East or West, so we go there instead
+        {
+            if(ex > 0) avail_dimension_set[1]++;
+            else if(ex < 0) avail_dimension_set[2]++;
+        }
+    }
+    else{       // No restrictions for Southbound
+        avail_dimension_set[3]++;
+        if(ex > 0) avail_dimension_set[1]++;
+        else if(ex < 0) avail_dimension_set[2]++;
+    }
+    // End of North last algorithm
+    int dir_count = 0;
+    printf("S %d\tD %d\tC %d\t going to ",source_id,dest_id,my_id);
+    for(int i=0;i<4;i++){
+        dir_count += avail_dimension_set[i];
+
+        if(avail_dimension_set[i]){     //handles dir_count = 1 case
+            outport_dirn = this->compute_dirn(i);
+        }
+        if(avail_dimension_set[i]>0){
+            //printf("S %d D %d Router: %d\t going to %s\n",source_id,dest_id,my_id,(this->compute_dirn(i)).c_str());
+            printf("%s ",(this->compute_dirn(i)).c_str());
+        }
+    }
+    
+    if(dir_count == 2){
+        int i1 = -1,i2 = -1;
+        for(int i=0;i<4;i++){
+            if(avail_dimension_set[i] > 0){
+                if(i1 == -1) i1 = i;
+                else i2 = i;
+            }
+        }
+        std::srand(std::time(nullptr));
+        int random_var = std::rand();
+        if(random_var % 2 == 0){
+            outport_dirn = this->compute_dirn(i1);
+        }
+        else{
+            outport_dirn = this->compute_dirn(i2);
+        }
+        printf("-- %s",outport_dirn.c_str());
+    }
+    printf("\n");
+    
     return m_outports_dirn2idx[outport_dirn];
 }
