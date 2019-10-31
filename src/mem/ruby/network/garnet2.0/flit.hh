@@ -45,9 +45,10 @@ class flit
 {
   public:
     flit() {}
-    flit(int id, int vc, int vnet, RouteInfo route, int size,
+    flit(int gid, int id, int vc, int vnet, RouteInfo route, int size,
          MsgPtr msg_ptr, Cycles curTime);
 
+    int get_gid() { return global_id; }
     int get_outport() {return m_outport; }
     int get_size() { return m_size; }
     Cycles get_enqueue_time() { return m_enqueue_time; }
@@ -98,6 +99,7 @@ class flit
     bool functionalWrite(Packet *pkt);
 
   protected:
+    int global_id;
     int m_id;
     int m_vnet;
     int m_vc;

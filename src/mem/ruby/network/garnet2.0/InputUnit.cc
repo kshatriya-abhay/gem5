@@ -98,10 +98,10 @@ InputUnit::wakeup()
             set_vc_active(vc, m_router->curCycle());
 
             // Route computation for this vc
+            printf("gid %d\t",t_flit->get_gid());
             int outport = m_router->route_compute(t_flit->get_route(),
                 m_id, m_direction);
 
-            //printf("id %d curr %d next %d\n",t_flit->get_id(),m_router->get_id(),outport);
             // Update output port in VC
             // All flits in this packet will use this output port
             // The output port field in the flit is updated after it wins SA

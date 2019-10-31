@@ -73,6 +73,9 @@ class NetworkInterface : public ClockedObject, public Consumer
 
     uint32_t functionalWrite(Packet *);
 
+    std::vector<flitBuffer *>  get_vcs(){
+        return m_ni_out_vcs;
+    }
   private:
     GarnetNetwork *m_net_ptr;
     const NodeID m_id;
