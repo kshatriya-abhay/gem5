@@ -39,6 +39,7 @@
 #include "mem/ruby/network/garnet2.0/CommonTypes.hh"
 #include "mem/ruby/network/garnet2.0/GarnetNetwork.hh"
 #include "mem/ruby/network/garnet2.0/flit.hh"
+#include "mem/ruby/network/garnet2.0/NetworkInterface.hh"
 
 class InputUnit;
 class Router;
@@ -82,6 +83,7 @@ class RoutingUnit
                              PortDirection inport_dirn);
     
     PortDirection compute_dirn(int index);
+    int compute_neighbor_id(int my_id, int index, int num_cols);
   private:
     Router *m_router;
 

@@ -38,6 +38,8 @@
 #include "mem/ruby/network/garnet2.0/Router.hh"
 #include "mem/ruby/slicc_interface/Message.hh"
 
+//class flitBuffer;
+
 PortDirection
 RoutingUnit::compute_dirn(int index)
 {
@@ -52,6 +54,20 @@ RoutingUnit::compute_dirn(int index)
     	return "South";
     }
     return "Unknown";
+}
+int
+RoutingUnit::compute_neighbor_id(int my_id, int index, int num_cols){
+    switch(index){
+        case 0:
+        return my_id + num_cols;
+        case 1:
+        return my_id+1;
+        case 2:
+        return my_id-1;
+        case 3:
+        return my_id - num_cols;
+    }
+    return my_id;
 }
 
 RoutingUnit::RoutingUnit(Router *router)
@@ -163,6 +179,7 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
         // all with output port direction = "Local"
         // Get exact outport id from table
         outport = lookupRoutingTable(route.vnet, route.net_dest);
+        printf("reached destination %d.\n",route.dest_router);
         return outport;
     }
 
@@ -350,14 +367,34 @@ RoutingUnit::outportComputeOddEven(RouteInfo route,
     			else i2 = i;
     		}
     	}
-    	std::srand(std::time(nullptr));
-    	int random_var = std::rand();
-    	if(random_var % 2 == 0){
-    		outport_dirn = this->compute_dirn(i1);
-    	}
-    	else{
-    		outport_dirn = this->compute_dirn(i2);
-    	}
+        int rid1 = compute_neighbor_id(my_id,i1,num_cols);
+        int rid2 = compute_neighbor_id(my_id,i2,num_cols);
+        std::vector<flitBuffer *> b1 = m_router->get_net_ptr()->get_ni_ptr(rid1)->get_vcs();
+        std::vector<flitBuffer *> b2 = m_router->get_net_ptr()->get_ni_ptr(rid2)->get_vcs();
+        int sum1 = 0, sum2 = 0;
+        for(int i=0;i<b1.size();i++){
+            sum1+=b1[i]->getBufferSize();
+        }
+        for(int i=0;i<b2.size();i++){
+            sum2+=b2[i]->getBufferSize();
+        }
+        printf(" Sum1: %d, Sum2: %d ",sum1,sum2);
+        if(sum1 < sum2){
+            outport_dirn = this->compute_dirn(i1);
+        }
+        else if(sum1 > sum2){
+            outport_dirn = this->compute_dirn(i2);
+        }
+        else{       // still random if the buffers are equal (mostly triggered when both zero)
+        	std::srand(std::time(nullptr));
+        	int random_var = std::rand();
+        	if(random_var % 2 == 0){
+        		outport_dirn = this->compute_dirn(i1);
+        	}
+        	else{
+        		outport_dirn = this->compute_dirn(i2);
+        	}
+        }
         printf("-- %s",outport_dirn.c_str());
     }
     printf("\n");

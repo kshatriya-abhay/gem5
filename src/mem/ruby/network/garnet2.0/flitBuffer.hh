@@ -74,7 +74,10 @@ class flitBuffer
         m_buffer.push_back(flt);
         std::push_heap(m_buffer.begin(), m_buffer.end(), flit::greater);
     }
-
+    int
+    getBufferSize(){
+        return m_buffer.size();
+    }
     uint32_t functionalWrite(Packet *pkt);
 
   private:

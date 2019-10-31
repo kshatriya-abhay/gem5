@@ -85,7 +85,10 @@ class GarnetNetwork : public Network
     }
     int getNumRouters();
     int get_router_id(int ni);
-
+    
+    NetworkInterface * get_ni_ptr(int id){
+        return m_nis[id];
+    }
 
     // Methods used by Topology to setup the network
     void makeExtOutLink(SwitchID src, NodeID dest, BasicLink* link,
