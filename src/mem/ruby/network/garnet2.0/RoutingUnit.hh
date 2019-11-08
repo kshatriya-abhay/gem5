@@ -48,7 +48,7 @@ class RoutingUnit
 {
   public:
     RoutingUnit(Router *router);
-    int outportCompute(RouteInfo route,
+    int outportCompute(flit* t_flit,
                       int inport,
                       PortDirection inport_dirn);
 

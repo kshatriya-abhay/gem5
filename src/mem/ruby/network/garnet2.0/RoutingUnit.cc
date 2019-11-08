@@ -168,11 +168,11 @@ RoutingUnit::addOutDirection(PortDirection outport_dirn, int outport_idx)
 // table is provided here.
 
 int
-RoutingUnit::outportCompute(RouteInfo route, int inport,
+RoutingUnit::outportCompute(flit* t_flit, int inport,
                             PortDirection inport_dirn)
 {
     int outport = -1;
-
+    RouteInfo route = t_flit->get_route();
     if (route.dest_router == m_router->get_id()) {
 
         // Multiple NIs may be connected to this router,
@@ -182,13 +182,33 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
         printf("reached destination %d.\n",route.dest_router);
         return outport;
     }
-    
+
     int fault_router_id = m_router->get_net_ptr()->getfaultrouter();
-    if(m_router->get_id() == fault_router_id){
-        int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
-        int num_cols = m_router->get_net_ptr()->getNumCols();
+    int my_id = m_router->get_id();
+    int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+    if(my_id == fault_router_id){
         printf("fault_router_id: %d\t",fault_router_id);
-        route.dest_router = (num_rows * num_cols) + 1;
+        route.dest_router = (num_rows * num_cols) + (route.dest_router % num_cols);
+        t_flit->set_route(route);
+    }
+    //Checking for faulty destination at the edge routers
+    if(my_id / num_cols == num_rows-1){
+        if(route.dest_router >= num_cols*num_rows){
+            /*if(t_flit->get_time() > Cycles(0)){
+                t_flit->set_time(Cycles(0));    //least possible time so it goes at the end of buffer
+            }
+            return -1;  // so we can check and re-insert it into buffer
+            */
+            route.dest_router = ((route.dest_router % num_cols) - num_cols);
+            t_flit->set_route(route);
+        }
+    }
+    else if(my_id / num_cols == 0){
+        if(route.dest_router < 0){
+            route.dest_router = (num_rows * num_cols) + (route.dest_router % num_cols);
+            t_flit->set_route(route);
+        }
     }
 
     // Routing Algorithm set in GarnetNetwork.py
@@ -299,7 +319,10 @@ RoutingUnit::outportComputeOddEven(RouteInfo route,
     int dest_id = route.dest_router;
     int dx = dest_id % num_cols;
     int dy = dest_id / num_cols;
-
+    if(dest_id < 0){
+        dy = -1;
+        dx = (dest_id+num_cols)%num_cols;
+    }
     int source_id = route.src_router;
     int sx = source_id % num_cols;
     //int sy = source_id / num_cols;

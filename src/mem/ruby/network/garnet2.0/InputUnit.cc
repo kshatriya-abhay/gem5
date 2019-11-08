@@ -99,9 +99,12 @@ InputUnit::wakeup()
 
             // Route computation for this vc
             printf("gid %d\t",t_flit->get_gid());
-            int outport = m_router->route_compute(t_flit->get_route(),
+            int outport = m_router->route_compute(t_flit,
                 m_id, m_direction);
-
+            // if(outport == -1){  //re-insertion at the edge
+            //     printf("pushing back flit\n");
+            //     m_in_link->flit_push_back(t_flit);
+            // }
             // Update output port in VC
             // All flits in this packet will use this output port
             // The output port field in the flit is updated after it wins SA

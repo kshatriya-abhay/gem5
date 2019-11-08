@@ -68,7 +68,7 @@ class NetworkLink : public ClockedObject, public Consumer
 
     inline flit* peekLink()       { return linkBuffer->peekTopFlit(); }
     inline flit* consumeLink()    { return linkBuffer->getTopFlit(); }
-
+    void flit_push_back(flit* t_flit)    { linkBuffer->insert(t_flit); }
     uint32_t functionalWrite(Packet *);
 
   private:
