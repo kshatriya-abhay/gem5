@@ -89,6 +89,7 @@ class GarnetNetwork : public Network
     NetworkInterface * get_ni_ptr(int id){
         return m_nis[id];
     }
+    int getfaultrouter(){return fault_router_id;}
 
     // Methods used by Topology to setup the network
     void makeExtOutLink(SwitchID src, NodeID dest, BasicLink* link,
@@ -156,6 +157,7 @@ class GarnetNetwork : public Network
     uint32_t m_buffers_per_data_vc;
     int m_routing_algorithm;
     bool m_enable_fault_model;
+    int fault_router_id;
 
     // Statistical variables
     Stats::Vector m_packets_received;

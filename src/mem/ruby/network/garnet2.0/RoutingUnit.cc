@@ -182,6 +182,14 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
         printf("reached destination %d.\n",route.dest_router);
         return outport;
     }
+    
+    int fault_router_id = m_router->get_net_ptr()->getfaultrouter();
+    if(m_router->get_id() == fault_router_id){
+        int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
+        int num_cols = m_router->get_net_ptr()->getNumCols();
+        printf("fault_router_id: %d\t",fault_router_id);
+        route.dest_router = (num_rows * num_cols) + 1;
+    }
 
     // Routing Algorithm set in GarnetNetwork.py
     // Can be over-ridden from command line using --routing-algorithm = 1
