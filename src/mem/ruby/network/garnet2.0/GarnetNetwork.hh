@@ -142,7 +142,10 @@ class GarnetNetwork : public Network
     {
         m_total_hops += hops;
     }
-
+    int
+    get_fault_router(){
+        return fault_router_id;
+    }
   protected:
     // Configuration
     int m_num_rows;
@@ -153,6 +156,8 @@ class GarnetNetwork : public Network
     uint32_t m_buffers_per_data_vc;
     int m_routing_algorithm;
     bool m_enable_fault_model;
+
+    int fault_router_id;
 
     // Statistical variables
     Stats::Vector m_packets_received;

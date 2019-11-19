@@ -125,6 +125,18 @@ GarnetNetwork::init()
         m_num_cols = -1;
     }
 
+    fault_router_id = -1;
+
+    std::srand(std::time(nullptr));
+    vector<int>random_var(2,0);
+    for(int i = 0; i<2;i++){
+        random_var[i] = std::rand();
+    }
+    int x = (random_var[0])%(m_num_rows-2)+1;
+    int y = (random_var[1])%(m_num_cols-2)+1;
+    fault_router_id = x+y*m_num_cols;
+
+    printf("\n\nFault router: %d\n\n",fault_router_id);
     // FaultModel: declare each router to the fault model
     if (isFaultModelEnabled()) {
         for (vector<Router*>::const_iterator i= m_routers.begin();
