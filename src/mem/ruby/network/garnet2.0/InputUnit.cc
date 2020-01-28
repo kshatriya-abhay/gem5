@@ -99,6 +99,18 @@ InputUnit::wakeup()
 
             // Route computation for this vc
             printf("gid %d\t",t_flit->get_gid());
+
+            RouteInfo route = t_flit->get_route();
+            int my_id = m_router->get_id();
+            int fault_router_id = m_router  ->get_net_ptr()->getfaultrouter();
+            int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
+            int num_cols = m_router->get_net_ptr()->getNumCols();
+            if(my_id == fault_router_id){
+                printf("fault_router_id: %d\t",fault_router_id);
+                route.dest_router = (num_rows * num_cols) + (route.dest_router % num_cols);
+                t_flit->set_route(route);
+            }
+
             int outport = m_router->route_compute(t_flit,
                 m_id, m_direction);
             // if(outport == -1){  //re-insertion at the edge

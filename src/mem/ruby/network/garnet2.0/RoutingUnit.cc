@@ -183,15 +183,10 @@ RoutingUnit::outportCompute(flit* t_flit, int inport,
         return outport;
     }
 
-    int fault_router_id = m_router->get_net_ptr()->getfaultrouter();
     int my_id = m_router->get_id();
     int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
     int num_cols = m_router->get_net_ptr()->getNumCols();
-    if(my_id == fault_router_id){
-        printf("fault_router_id: %d\t",fault_router_id);
-        route.dest_router = (num_rows * num_cols) + (route.dest_router % num_cols);
-        t_flit->set_route(route);
-    }
+
     //Checking for faulty destination at the edge routers
     if(my_id / num_cols == num_rows-1){
         if(route.dest_router >= num_cols*num_rows){
