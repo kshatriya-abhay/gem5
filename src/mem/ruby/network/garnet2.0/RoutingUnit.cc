@@ -190,13 +190,13 @@ RoutingUnit::outportCompute(flit* t_flit, int inport,
     //Checking for faulty destination at the edge routers
     if(my_id / num_cols == num_rows-1){
         if(route.dest_router >= num_cols*num_rows){
-            /*if(t_flit->get_time() > Cycles(0)){
-                t_flit->set_time(Cycles(0));    //least possible time so it goes at the end of buffer
-            }
+            // if(t_flit->get_time() > Cycles(0)){
+            //     t_flit->set_time(Cycles(0));    //least possible time so it goes at the end of buffer
+            // }
             return -1;  // so we can check and re-insert it into buffer
-            */
-            route.dest_router = ((route.dest_router % num_cols) - num_cols);
-            t_flit->set_route(route);
+            
+            // route.dest_router = ((route.dest_router % num_cols) - num_cols);
+            // t_flit->set_route(route);
         }
     }
     else if(my_id / num_cols == 0){

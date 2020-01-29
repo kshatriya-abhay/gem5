@@ -85,6 +85,7 @@ void
 InputUnit::wakeup()
 {
     flit *t_flit;
+    int outport = 0;
     if (m_in_link->isReady(m_router->curCycle())) {
 
         t_flit = m_in_link->consumeLink();
@@ -94,7 +95,7 @@ InputUnit::wakeup()
         if ((t_flit->get_type() == HEAD_) ||
             (t_flit->get_type() == HEAD_TAIL_)) {
 
-            assert(m_vcs[vc]->get_state() == IDLE_);
+            // assert(m_vcs[vc]->get_state() == IDLE_);
             set_vc_active(vc, m_router->curCycle());
 
             // Route computation for this vc
@@ -111,46 +112,48 @@ InputUnit::wakeup()
                 t_flit->set_route(route);
             }
 
-            int outport = m_router->route_compute(t_flit,
+            outport = m_router->route_compute(t_flit,
                 m_id, m_direction);
-            // if(outport == -1){  //re-insertion at the edge
-            //     printf("pushing back flit\n");
-            //     m_in_link->flit_push_back(t_flit);
-            // }
-            // Update output port in VC
-            // All flits in this packet will use this output port
-            // The output port field in the flit is updated after it wins SA
-            grant_outport(vc, outport);
+            if(outport == -1){  //re-insertion at the edge
+                printf("pushing back flit at router %d\n",my_id);
+                m_in_link->flit_push_back(t_flit);
+            }
+            else{
+                // Update output port in VC
+                // All flits in this packet will use this output port
+                // The output port field in the flit is updated after it wins SA
+                grant_outport(vc, outport);
+            }
 
         } else {
             assert(m_vcs[vc]->get_state() == ACTIVE_);
         }
+        if(outport != -1){
+            // Buffer the flit
+            m_vcs[vc]->insertFlit(t_flit);
 
+            int vnet = vc/m_vc_per_vnet;
+            // number of writes same as reads
+            // any flit that is written will be read only once
+            m_num_buffer_writes[vnet]++;
+            m_num_buffer_reads[vnet]++;
 
-        // Buffer the flit
-        m_vcs[vc]->insertFlit(t_flit);
+            Cycles pipe_stages = m_router->get_pipe_stages();
+            if (pipe_stages == 1) {
+                // 1-cycle router
+                // Flit goes for SA directly
+                t_flit->advance_stage(SA_, m_router->curCycle());
+            } else {
+                assert(pipe_stages > 1);
+                // Router delay is modeled by making flit wait in buffer for
+                // (pipe_stages cycles - 1) cycles before going for SA
 
-        int vnet = vc/m_vc_per_vnet;
-        // number of writes same as reads
-        // any flit that is written will be read only once
-        m_num_buffer_writes[vnet]++;
-        m_num_buffer_reads[vnet]++;
+                Cycles wait_time = pipe_stages - Cycles(1);
+                t_flit->advance_stage(SA_, m_router->curCycle() + wait_time);
 
-        Cycles pipe_stages = m_router->get_pipe_stages();
-        if (pipe_stages == 1) {
-            // 1-cycle router
-            // Flit goes for SA directly
-            t_flit->advance_stage(SA_, m_router->curCycle());
-        } else {
-            assert(pipe_stages > 1);
-            // Router delay is modeled by making flit wait in buffer for
-            // (pipe_stages cycles - 1) cycles before going for SA
-
-            Cycles wait_time = pipe_stages - Cycles(1);
-            t_flit->advance_stage(SA_, m_router->curCycle() + wait_time);
-
-            // Wakeup the router in that cycle to perform SA
-            m_router->schedule_wakeup(Cycles(wait_time));
+                // Wakeup the router in that cycle to perform SA
+                m_router->schedule_wakeup(Cycles(wait_time));
+            }
         }
     }
 }
