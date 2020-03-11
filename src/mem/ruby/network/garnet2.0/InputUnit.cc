@@ -85,7 +85,7 @@ void
 InputUnit::wakeup()
 {
     flit *t_flit;
-    int outport = 0;
+    int outport = -1;
     if (m_in_link->isReady(m_router->curCycle())) {
 
         t_flit = m_in_link->consumeLink();
@@ -95,7 +95,7 @@ InputUnit::wakeup()
         if ((t_flit->get_type() == HEAD_) ||
             (t_flit->get_type() == HEAD_TAIL_)) {
 
-            // assert(m_vcs[vc]->get_state() == IDLE_);
+            assert(m_vcs[vc]->get_state() == IDLE_);
             set_vc_active(vc, m_router->curCycle());
 
             // Route computation for this vc
@@ -103,8 +103,8 @@ InputUnit::wakeup()
 
             RouteInfo route = t_flit->get_route();
             int my_id = m_router->get_id();
-            int fault_router_id = m_router  ->get_net_ptr()->getfaultrouter();
             int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
+            int fault_router_id = m_router  ->get_net_ptr()->getfaultrouter();
             int num_cols = m_router->get_net_ptr()->getNumCols();
             if(my_id == fault_router_id){
                 printf("fault_router_id: %d\t",fault_router_id);
@@ -114,30 +114,40 @@ InputUnit::wakeup()
 
             outport = m_router->route_compute(t_flit,
                 m_id, m_direction);
-            if(outport == -1){  //re-insertion at the edge
-                printf("pushing back flit at router %d\n",my_id);
-                m_in_link->flit_push_back(t_flit);
-            }
-            else{
-                // Update output port in VC
-                // All flits in this packet will use this output port
-                // The output port field in the flit is updated after it wins SA
-                grant_outport(vc, outport);
-            }
+            if(outport == -1){  /* Instead of re-insertion,
+                                   we can just accept the packet at this router, drop it,
+                                   and then send detection signals*/
 
+                // route.dest_router = my_id;
+                // t_flit->set_route(route);
+                printf("VC Number: %d\n", vc);
+                t_flit->set_vc(vc);
+                printf("Accepting a bad flit at the edge router %d\n", my_id);
+                // outport = m_router->route_compute(t_flit, m_id, m_direction);
+            }
+            // Update output port in VC
+            // All flits in this packet will use this output port
+            // The output port field in the flit is updated after it wins SA
+            
+            grant_outport(vc, outport);
+            
         } else {
             assert(m_vcs[vc]->get_state() == ACTIVE_);
+            // if(outport == -1){
+            //     outport = 2;
+            // }
         }
-        if(outport != -1){
+
             // Buffer the flit
             m_vcs[vc]->insertFlit(t_flit);
-
+            printf("Inserted the flit in VC %d\n",vc);
             int vnet = vc/m_vc_per_vnet;
             // number of writes same as reads
             // any flit that is written will be read only once
             m_num_buffer_writes[vnet]++;
             m_num_buffer_reads[vnet]++;
 
+        if(outport != -1){
             Cycles pipe_stages = m_router->get_pipe_stages();
             if (pipe_stages == 1) {
                 // 1-cycle router
