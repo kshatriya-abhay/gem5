@@ -147,7 +147,11 @@ class InputUnit : public Consumer
 
     uint32_t functionalWrite(Packet *pkt);
     void resetStats();
-
+    void show_blocked_vcs();
+    void update_blocked_vcs(int vc);
+    bool is_blocked(){
+        return (m_blocked_vcs.size() > 0);
+    }
   private:
     int m_id;
     PortDirection m_direction;
@@ -161,6 +165,7 @@ class InputUnit : public Consumer
 
     // Input Virtual channels
     std::vector<VirtualChannel *> m_vcs;
+    std::vector<VirtualChannel *> m_blocked_vcs;
 
     // Statistical variables
     std::vector<double> m_num_buffer_writes;

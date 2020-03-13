@@ -179,7 +179,7 @@ RoutingUnit::outportCompute(flit* t_flit, int inport,
         // all with output port direction = "Local"
         // Get exact outport id from table
         outport = lookupRoutingTable(route.vnet, route.net_dest);
-        printf("reached destination %d.\n",route.dest_router);
+        // printf("reached destination %d.\n",route.dest_router);
         return outport;
     }
 
@@ -372,7 +372,7 @@ RoutingUnit::outportComputeOddEven(RouteInfo route,
     }
     //  **** End of Odd-even
     int dir_count = 0;
-    printf("S %d\tD %d\tC %d\t going to ",source_id,dest_id,my_id);
+    // printf("S %d\tD %d\tC %d\t going to ",source_id,dest_id,my_id);
     for(int i=0;i<4;i++){
     	dir_count += avail_dimension_set[i];
 
@@ -381,7 +381,7 @@ RoutingUnit::outportComputeOddEven(RouteInfo route,
     	}
         if(avail_dimension_set[i]>0){
             //printf("S %d D %d Router: %d\t going to %s\n",source_id,dest_id,my_id,(this->compute_dirn(i)).c_str());
-            printf("%s ",(this->compute_dirn(i)).c_str());
+            // printf("%s ",(this->compute_dirn(i)).c_str());
         }
     }
     
@@ -404,7 +404,7 @@ RoutingUnit::outportComputeOddEven(RouteInfo route,
         for(int i=0;i<b2.size();i++){
             sum2+=b2[i]->getBufferSize();
         }
-        printf(" Sum1: %d, Sum2: %d ",sum1,sum2);
+        // printf(" Sum1: %d, Sum2: %d ",sum1,sum2);
         if(sum1 < sum2){
             outport_dirn = this->compute_dirn(i1);
         }
@@ -421,9 +421,9 @@ RoutingUnit::outportComputeOddEven(RouteInfo route,
         		outport_dirn = this->compute_dirn(i2);
         	}
         }
-        printf("-- %s",outport_dirn.c_str());
+        // printf("-- %s",outport_dirn.c_str());
     }
-    printf("\n");
+    // printf("\n");
     
     return m_outports_dirn2idx[outport_dirn];
 }

@@ -87,8 +87,17 @@ Router::wakeup()
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
 
     // check for incoming flits
+    int M5_VAR_USED num_rows = get_net_ptr()->getNumRows();
+    int num_cols = get_net_ptr()->getNumCols();
+
+    if(m_id >= num_cols*(num_rows - 1)){
+        for (int inport = 0; inport < m_input_unit.size(); inport++) {
+            if(m_input_unit[inport]->is_blocked()) {printf("Router %d\n", m_id); break;}
+        }
+    }
     for (int inport = 0; inport < m_input_unit.size(); inport++) {
         m_input_unit[inport]->wakeup();
+        m_input_unit[inport]->show_blocked_vcs();
     }
 
     // check for incoming credits

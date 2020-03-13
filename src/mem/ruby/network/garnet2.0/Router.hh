@@ -135,6 +135,8 @@ class Router : public BasicRouter, public Consumer
     Stats::Scalar m_sw_output_arbiter_activity;
 
     Stats::Scalar m_crossbar_activity;
+
+    Stats::Scalar m_num_infected;    
 };
 
 #endif // __MEM_RUBY_NETWORK_GARNET_ROUTER_HH__

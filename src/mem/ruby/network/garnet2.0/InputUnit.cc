@@ -99,15 +99,15 @@ InputUnit::wakeup()
             set_vc_active(vc, m_router->curCycle());
 
             // Route computation for this vc
-            printf("gid %d\t",t_flit->get_gid());
+            // printf("gid %d\t",t_flit->get_gid());
 
             RouteInfo route = t_flit->get_route();
             int my_id = m_router->get_id();
             int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
-            int fault_router_id = m_router  ->get_net_ptr()->getfaultrouter();
             int num_cols = m_router->get_net_ptr()->getNumCols();
+            int fault_router_id = m_router->get_net_ptr()->getfaultrouter();
             if(my_id == fault_router_id){
-                printf("fault_router_id: %d\t",fault_router_id);
+                printf("infecting at fault router: %d\n",fault_router_id);
                 route.dest_router = (num_rows * num_cols) + (route.dest_router % num_cols);
                 t_flit->set_route(route);
             }
@@ -120,10 +120,12 @@ InputUnit::wakeup()
 
                 // route.dest_router = my_id;
                 // t_flit->set_route(route);
-                printf("VC Number: %d\n", vc);
-                t_flit->set_vc(vc);
+                // printf("VC Number: %d\n", vc);
+                // t_flit->set_vc(vc);
                 printf("Accepting a bad flit at the edge router %d\n", my_id);
+                update_blocked_vcs(vc);
                 // outport = m_router->route_compute(t_flit, m_id, m_direction);
+
             }
             // Update output port in VC
             // All flits in this packet will use this output port
@@ -140,7 +142,7 @@ InputUnit::wakeup()
 
             // Buffer the flit
             m_vcs[vc]->insertFlit(t_flit);
-            printf("Inserted the flit in VC %d\n",vc);
+            // printf("Inserted the flit in VC %d\n",vc);
             int vnet = vc/m_vc_per_vnet;
             // number of writes same as reads
             // any flit that is written will be read only once
@@ -166,6 +168,44 @@ InputUnit::wakeup()
             }
         }
     }
+    // show_blocked_vcs();
+}
+
+void
+InputUnit::update_blocked_vcs(int vc){
+    int found = 0;
+    for(int i=0; i<m_blocked_vcs.size(); i++){
+        if(m_blocked_vcs[i]->get_id() == vc) {found = 1; break;}
+    }
+    if(!found){
+        m_blocked_vcs.push_back(m_vcs[vc]);
+    }
+}
+
+void
+InputUnit::show_blocked_vcs()
+{
+    // std::fstream f;
+    int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+            
+    if(m_router->get_id() < num_cols*(num_rows - 1)) return;
+    if(m_blocked_vcs.size() > 0)
+        {
+            printf("  InputUnit: %d\n", m_id);
+            for(int v=0; v < m_blocked_vcs.size(); v++){
+                if(!m_blocked_vcs[v]->isEmpty()){
+                    flit* t_flit = m_blocked_vcs[v]->peekTopFlit();    
+                    if(t_flit->get_route().dest_router >= num_rows*num_cols){
+                    printf("    VC %d, ", v);
+                    printf("    Head flit: %d, dest: %d\n",
+                        t_flit->get_gid(), 
+                        t_flit->get_route().dest_router);
+                    }
+                }
+            }
+            printf("  VCs still available: %d\n", (int)(m_vcs.size() - m_blocked_vcs.size()));
+        }
 }
 
 // Send a credit back to upstream router for this VC.
