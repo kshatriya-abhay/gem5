@@ -91,7 +91,16 @@ InputUnit::wakeup()
         t_flit = m_in_link->consumeLink();
         int vc = t_flit->get_vc();
         t_flit->increment_hops(); // for stats
+        if (t_flit->get_type() == DEBUG_) {
+            int h = t_flit->get_route()->hops_traversed;
+            printf("DEBUG FLIT. Hops = %d\n", h);
+            if(h > 1){
+                printf("This is a router neighbouring the faulty router.\n");
+            }
+            assert(m_vcs[vc]->get_state() == IDLE_);
+            set_vc_active(vc, m_router->curCycle());
 
+        }
         if ((t_flit->get_type() == HEAD_) ||
             (t_flit->get_type() == HEAD_TAIL_)) {
 
@@ -123,9 +132,9 @@ InputUnit::wakeup()
                 // printf("VC Number: %d\n", vc);
                 // t_flit->set_vc(vc);
                 printf("Accepting a bad flit at the edge router %d\n", my_id);
-                update_blocked_vcs(vc);
+                update_blocked_vcs(vc); // for displaying
                 // outport = m_router->route_compute(t_flit, m_id, m_direction);
-
+                
             }
             // Update output port in VC
             // All flits in this packet will use this output port
