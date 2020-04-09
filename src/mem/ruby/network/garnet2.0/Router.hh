@@ -94,6 +94,9 @@ class Router : public BasicRouter, public Consumer
     int route_compute(flit* t_flit, int inport, PortDirection direction);
     void grant_switch(int inport, flit *t_flit);
     void schedule_wakeup(Cycles time);
+    int get_free_vc(int id, int vnet);
+    void debug_flit_pushback(flit* t_flit){ debug_flits_received.push_back(t_flit); }
+    int debug_flit_rcv_count(){ return debug_flits_received.size(); }
 
     std::string getPortDirectionName(PortDirection direction);
     void printFaultVector(std::ostream& out);
@@ -115,6 +118,12 @@ class Router : public BasicRouter, public Consumer
     }
 
     uint32_t functionalWrite(Packet *);
+    int m_debug_flits_sent;
+    int m_debug_flits_count;
+    int m_fault_detected;
+    Cycles first_debug_flit_arrived;
+    bool m_waiting_for_debug_flits;
+    int m_detected_ht_id;
 
   private:
     Cycles m_latency;
@@ -123,6 +132,9 @@ class Router : public BasicRouter, public Consumer
 
     std::vector<InputUnit *> m_input_unit;
     std::vector<OutputUnit *> m_output_unit;
+
+    std::vector<flit *> debug_flits_received;
+
     RoutingUnit *m_routing_unit;
     SwitchAllocator *m_sw_alloc;
     CrossbarSwitch *m_switch;

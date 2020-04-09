@@ -46,7 +46,7 @@ class flit
   public:
     flit() {}
     flit(int gid, int id, int vc, int vnet, RouteInfo route, int size,
-         MsgPtr msg_ptr, Cycles curTime);
+         MsgPtr msg_ptr, Cycles curTime, bool is_debug);
 
     int get_gid() { return global_id; }
     int get_outport() {return m_outport; }
@@ -61,10 +61,12 @@ class flit
     flit_type get_type() { return m_type; }
     std::pair<flit_stage, Cycles> get_stage() { return m_stage; }
     Cycles get_src_delay() { return src_delay; }
+    bool get_is_debug() { return m_is_debug; }
 
     void set_outport(int port) { m_outport = port; }
     void set_time(Cycles time) { m_time = time; }
     void set_vc(int vc) { m_vc = vc; }
+    void set_vnet(int vnet) { m_vnet = vnet; }
     void set_route(RouteInfo route) { m_route = route; }
     void set_src_delay(Cycles delay) { src_delay = delay; }
 
@@ -96,6 +98,13 @@ class flit
         }
     }
 
+    static bool
+    greater_debug(flit* n1, flit* n2)
+    {   //used to push debug flits at the front
+        // since debug flits are assigned negative gid's
+        return (n1->get_gid() > n2->get_gid());
+    }
+
     bool functionalWrite(Packet *pkt);
 
   protected:
@@ -111,6 +120,8 @@ class flit
     int m_outport;
     Cycles src_delay;
     std::pair<flit_stage, Cycles> m_stage;
+
+    bool m_is_debug;
 };
 
 inline std::ostream&

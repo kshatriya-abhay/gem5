@@ -152,6 +152,8 @@ class InputUnit : public Consumer
     bool is_blocked(){
         return (m_blocked_vcs.size() > 0);
     }
+    flit* generate_debug_flit(int dest);
+    void set_vc_vnet_debugflit(flit* d_flit);
   private:
     int m_id;
     PortDirection m_direction;

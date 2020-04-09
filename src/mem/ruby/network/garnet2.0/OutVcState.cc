@@ -54,7 +54,7 @@ void
 OutVcState::increment_credit()
 {
     m_credit_count++;
-    assert(m_credit_count <= m_max_credit_count);
+    //assert(m_credit_count <= m_max_credit_count);
 }
 
 void

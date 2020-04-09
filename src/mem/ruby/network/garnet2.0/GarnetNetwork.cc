@@ -138,6 +138,7 @@ GarnetNetwork::init()
     int x = (random_var[0])%(m_num_rows-2)+1;
     int y = (random_var[1])%(m_num_cols-2)+1;
     fault_router_id = x+y*m_num_cols;
+    printf("Fault router for this simulation: %d\n", fault_router_id);
 
     // // FaultModel: declare each router to the fault model
     if (isFaultModelEnabled()) {
@@ -159,6 +160,12 @@ GarnetNetwork::init()
 
 GarnetNetwork::~GarnetNetwork()
 {
+    for(int i = 0; i < m_routers.size(); i++){
+        int id = m_routers[i] -> m_detected_ht_id;
+        if(m_routers[i] -> m_detected_ht_id != -1){
+            cout << "Detected HT " << id << " at router " << m_routers[i]->get_id() << "\n";
+        }
+    }
     deletePointers(m_routers);
     deletePointers(m_nis);
     deletePointers(m_networklinks);
