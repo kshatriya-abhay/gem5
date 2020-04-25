@@ -96,6 +96,12 @@ class flit
         }
     }
 
+    static bool
+    greater_debug(flit* n1, flit* n2)
+    {   //used to push debug flits at the front
+        return (n1->get_id() > n2->get_id());
+    }
+
     bool functionalWrite(Packet *pkt);
 
   protected:

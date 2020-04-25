@@ -76,7 +76,7 @@ void
 Router::init()
 {
     BasicRouter::init();
-
+    m_debug_pulses = 0;
     m_sw_alloc->init();
     m_switch->init();
 }

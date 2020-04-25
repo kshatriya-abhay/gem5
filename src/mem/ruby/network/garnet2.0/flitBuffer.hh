@@ -74,6 +74,14 @@ class flitBuffer
         m_buffer.push_back(flt);
         std::push_heap(m_buffer.begin(), m_buffer.end(), flit::greater);
     }
+
+    void
+    insert_debug(flit *flt)
+    {
+        m_buffer.push_back(flt);
+        std::push_heap(m_buffer.begin(), m_buffer.end(), flit::greater_debug);
+    }
+
     int
     getBufferSize(){
         return m_buffer.size();
