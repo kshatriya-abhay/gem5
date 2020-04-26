@@ -144,6 +144,8 @@ class InputUnit : public Consumer
     { return m_num_buffer_reads[vnet]; }
     double get_buf_write_activity(unsigned int vnet) const
     { return m_num_buffer_writes[vnet]; }
+    double get_num_infected_activity(unsigned int vnet) const
+    { return m_num_infected_flits[vnet]; }
 
     uint32_t functionalWrite(Packet *pkt);
     void resetStats();
@@ -170,6 +172,7 @@ class InputUnit : public Consumer
     // Statistical variables
     std::vector<double> m_num_buffer_writes;
     std::vector<double> m_num_buffer_reads;
+    std::vector<double> m_num_infected_flits;
 };
 
 #endif // __MEM_RUBY_NETWORK_GARNET_INPUT_UNIT_HH__

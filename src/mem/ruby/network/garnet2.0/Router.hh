@@ -130,13 +130,14 @@ class Router : public BasicRouter, public Consumer
     // Statistical variables required for power computations
     Stats::Scalar m_buffer_reads;
     Stats::Scalar m_buffer_writes;
+    Stats::Scalar m_num_infected; 
 
     Stats::Scalar m_sw_input_arbiter_activity;
     Stats::Scalar m_sw_output_arbiter_activity;
 
     Stats::Scalar m_crossbar_activity;
 
-    Stats::Scalar m_num_infected;    
+       
 };
 
 #endif // __MEM_RUBY_NETWORK_GARNET_ROUTER_HH__

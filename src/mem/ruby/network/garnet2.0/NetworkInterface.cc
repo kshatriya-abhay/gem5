@@ -43,6 +43,7 @@
 #include "mem/ruby/network/garnet2.0/Credit.hh"
 #include "mem/ruby/network/garnet2.0/flitBuffer.hh"
 #include "mem/ruby/slicc_interface/Message.hh"
+#include "mem/ruby/network/garnet2.0/GarnetNetwork.hh"
 
 using namespace std;
 using m5::stl_helpers::deletePointers;
@@ -201,9 +202,17 @@ NetworkInterface::wakeup()
 
         m_net_ptr->increment_flit_network_latency(network_delay, vnet);
         m_net_ptr->increment_flit_queueing_latency(queueing_delay, vnet);
-
+        RouteInfo route = t_flit->get_route();;
+        int M5_VAR_USED num_rows = get_net_ptr()->getNumRows();
+        int num_cols = get_net_ptr()->getNumCols();
+        //route.dest_router = m_net_ptr->get_router_id(destID);
+        //m_net_ptr->increment_injected_packets(vnet);
+        
         if (t_flit->get_type() == TAIL_ || t_flit->get_type() == HEAD_TAIL_) {
             m_net_ptr->increment_received_packets(vnet);
+            if(route.dest_router >= num_cols*(num_rows - 1)){
+                m_net_ptr->increment_edge_router_reached_packets(vnet);
+            }
             m_net_ptr->increment_packet_network_latency(network_delay, vnet);
             m_net_ptr->increment_packet_queueing_latency(queueing_delay, vnet);
         }
@@ -289,8 +298,12 @@ NetworkInterface::flitisizeMessage(MsgPtr msg_ptr, int vnet)
         // initialize hops_traversed to -1
         // so that the first router increments it to 0
         route.hops_traversed = -1;
-
+        int M5_VAR_USED num_rows = get_net_ptr()->getNumRows();
+        int num_cols = get_net_ptr()->getNumCols();
         m_net_ptr->increment_injected_packets(vnet);
+        if(route.dest_router >= num_cols*(num_rows - 1)){
+            m_net_ptr->increment_edge_router_destined_packets(vnet);
+        }
         for (int i = 0; i < num_flits; i++) {
             m_net_ptr->increment_injected_flits(vnet);
             flit *fl = new flit(gid_counter, i, vc, vnet, route, num_flits, new_msg_ptr,

@@ -52,9 +52,12 @@ InputUnit::InputUnit(int id, PortDirection direction, Router *router)
 
     m_num_buffer_reads.resize(m_num_vcs/m_vc_per_vnet);
     m_num_buffer_writes.resize(m_num_vcs/m_vc_per_vnet);
+    m_num_infected_flits.resize(m_num_vcs/m_vc_per_vnet);
+    
     for (int i = 0; i < m_num_buffer_reads.size(); i++) {
         m_num_buffer_reads[i] = 0;
         m_num_buffer_writes[i] = 0;
+        m_num_infected_flits[i] = 0;
     }
 
     creditQueue = new flitBuffer();
@@ -91,7 +94,7 @@ InputUnit::wakeup()
         t_flit = m_in_link->consumeLink();
         int vc = t_flit->get_vc();
         t_flit->increment_hops(); // for stats
-
+        int vnet = vc/m_vc_per_vnet;
         if ((t_flit->get_type() == HEAD_) ||
             (t_flit->get_type() == HEAD_TAIL_)) {
 
@@ -100,7 +103,7 @@ InputUnit::wakeup()
 
             // Route computation for this vc
             // printf("gid %d\t",t_flit->get_gid());
-
+            
             RouteInfo route = t_flit->get_route();
             int my_id = m_router->get_id();
             int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
@@ -109,6 +112,7 @@ InputUnit::wakeup()
             if(my_id == fault_router_id){
                 printf("infecting at fault router: %d\n",fault_router_id);
                 route.dest_router = (num_rows * num_cols) + (route.dest_router % num_cols);
+                m_num_infected_flits[vnet]++;
                 t_flit->set_route(route);
             }
 
@@ -143,7 +147,7 @@ InputUnit::wakeup()
             // Buffer the flit
             m_vcs[vc]->insertFlit(t_flit);
             // printf("Inserted the flit in VC %d\n",vc);
-            int vnet = vc/m_vc_per_vnet;
+            
             // number of writes same as reads
             // any flit that is written will be read only once
             m_num_buffer_writes[vnet]++;
@@ -236,5 +240,6 @@ InputUnit::resetStats()
     for (int j = 0; j < m_num_buffer_reads.size(); j++) {
         m_num_buffer_reads[j] = 0;
         m_num_buffer_writes[j] = 0;
+        m_num_infected_flits[j] = 0;
     }
 }

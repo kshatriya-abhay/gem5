@@ -283,6 +283,18 @@ GarnetNetwork::regStats()
         .flags(Stats::pdf | Stats::total | Stats::nozero | Stats::oneline)
         ;
 
+    m_edge_router_destined
+        .init(m_virtual_networks)
+        .name(name() + "edge_router_destined")
+        .flags(Stats::pdf | Stats::total | Stats::nozero | Stats::oneline)
+        ;    
+
+    m_edge_router_reached
+        .init(m_virtual_networks)
+        .name(name() + "edge_router_reached")
+        .flags(Stats::pdf | Stats::total | Stats::nozero | Stats::oneline)
+        ;    
+
     m_packet_network_latency
         .init(m_virtual_networks)
         .name(name() + ".packet_network_latency")
@@ -298,6 +310,8 @@ GarnetNetwork::regStats()
     for (int i = 0; i < m_virtual_networks; i++) {
         m_packets_received.subname(i, csprintf("vnet-%i", i));
         m_packets_injected.subname(i, csprintf("vnet-%i", i));
+        m_edge_router_destined.subname(i,csprintf("vnet-%i", i));
+        m_edge_router_reached.subname(i,csprintf("vnet-%i", i));
         m_packet_network_latency.subname(i, csprintf("vnet-%i", i));
         m_packet_queueing_latency.subname(i, csprintf("vnet-%i", i));
     }

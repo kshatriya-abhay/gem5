@@ -211,6 +211,11 @@ Router::regStats()
         .flags(Stats::nozero)
     ;
 
+    m_num_infected
+        .name(name() + ".infected_flit")
+        .flags(Stats::nozero)
+    ;
+
     m_crossbar_activity
         .name(name() + ".crossbar_activity")
         .flags(Stats::nozero)
@@ -234,6 +239,7 @@ Router::collateStats()
         for (int i = 0; i < m_input_unit.size(); i++) {
             m_buffer_reads += m_input_unit[i]->get_buf_read_activity(j);
             m_buffer_writes += m_input_unit[i]->get_buf_write_activity(j);
+            m_num_infected += m_input_unit[i]->get_num_infected_activity(j);
         }
     }
 

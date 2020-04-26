@@ -70,7 +70,7 @@ class NetworkInterface : public ClockedObject, public Consumer
     int get_vnet(int vc);
     int get_router_id() { return m_router_id; }
     void init_net_ptr(GarnetNetwork *net_ptr) { m_net_ptr = net_ptr; }
-
+    GarnetNetwork* get_net_ptr()                    { return m_net_ptr; }
     uint32_t functionalWrite(Packet *);
 
     std::vector<flitBuffer *>  get_vcs(){

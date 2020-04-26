@@ -113,6 +113,8 @@ class GarnetNetwork : public Network
     // increment counters
     void increment_injected_packets(int vnet) { m_packets_injected[vnet]++; }
     void increment_received_packets(int vnet) { m_packets_received[vnet]++; }
+    void increment_edge_router_destined_packets(int vnet) { m_edge_router_destined[vnet]++; }
+    void increment_edge_router_reached_packets(int vnet) { m_edge_router_reached[vnet]++; }
 
     void
     increment_packet_network_latency(Cycles latency, int vnet)
@@ -162,6 +164,8 @@ class GarnetNetwork : public Network
     // Statistical variables
     Stats::Vector m_packets_received;
     Stats::Vector m_packets_injected;
+    Stats::Vector m_edge_router_destined;
+    Stats::Vector m_edge_router_reached;
     Stats::Vector m_packet_network_latency;
     Stats::Vector m_packet_queueing_latency;
 
