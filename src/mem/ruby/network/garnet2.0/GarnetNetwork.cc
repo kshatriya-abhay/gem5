@@ -138,6 +138,7 @@ GarnetNetwork::init()
     int x = (random_var[0])%(m_num_rows-2)+1;
     int y = (random_var[1])%(m_num_cols-2)+1;
     fault_router_id = x+y*m_num_cols;
+    printf("Fault router for this simulation: %d\n", fault_router_id);
 
     // // FaultModel: declare each router to the fault model
     if (isFaultModelEnabled()) {

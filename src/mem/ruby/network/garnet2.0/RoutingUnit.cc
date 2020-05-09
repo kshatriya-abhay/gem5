@@ -174,7 +174,12 @@ RoutingUnit::outportCompute(flit* t_flit, int inport,
     int outport = -1;
     RouteInfo route = t_flit->get_route();
     if (route.dest_router == m_router->get_id()) {
-
+        // if(t_flit->get_type() == DEBUG_){
+        //     printf("debug flit -> lookup table\n");
+        // }
+        // else{
+        //     printf("normal flit -> lookup table\n");
+        // }
         // Multiple NIs may be connected to this router,
         // all with output port direction = "Local"
         // Get exact outport id from table
@@ -193,6 +198,7 @@ RoutingUnit::outportCompute(flit* t_flit, int inport,
             // if(t_flit->get_time() > Cycles(0)){
             //     t_flit->set_time(Cycles(0));    //least possible time so it goes at the end of buffer
             // }
+            // printf("RoutingUnit found a flit with faulty destination. returning -1\n");
             return -1;  // so we can check and re-insert it into buffer
             
             // route.dest_router = ((route.dest_router % num_cols) - num_cols);

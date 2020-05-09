@@ -76,7 +76,8 @@ void
 Router::init()
 {
     BasicRouter::init();
-    m_debug_pulses = 0;
+    m_debug_flits_sent = 0;
+    m_fault_detected = 0;
     m_sw_alloc->init();
     m_switch->init();
 }
@@ -92,12 +93,12 @@ Router::wakeup()
 
     if(m_id >= num_cols*(num_rows - 1)){
         for (int inport = 0; inport < m_input_unit.size(); inport++) {
-            if(m_input_unit[inport]->is_blocked()) {printf("Router %d\n", m_id); break;}
+            if(m_input_unit[inport]->is_blocked()) {/*printf("Router %d\n", m_id); break;*/}
         }
     }
     for (int inport = 0; inport < m_input_unit.size(); inport++) {
         m_input_unit[inport]->wakeup();
-        m_input_unit[inport]->show_blocked_vcs();
+        // m_input_unit[inport]->show_blocked_vcs();
     }
 
     // check for incoming credits

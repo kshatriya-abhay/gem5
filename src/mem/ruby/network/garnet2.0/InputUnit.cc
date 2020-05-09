@@ -88,142 +88,143 @@ InputUnit::wakeup()
     int outport = -1;
     int M5_VAR_USED num_rows = m_router->get_net_ptr()->getNumRows();
     int num_cols = m_router->get_net_ptr()->getNumCols();
-    
-    if (m_in_link->isReady(m_router->curCycle())) {
-
+    int fault_router_id = m_router->get_net_ptr()->getfaultrouter();
+    if (m_in_link->isReady(m_router->curCycle()))
+    {
         t_flit = m_in_link->consumeLink();
         int vc = t_flit->get_vc();
         int my_id = m_router->get_id();
         t_flit->increment_hops(); // for stats
-        if (t_flit->get_type() == DEBUG_) {
+
+        if (t_flit->get_type() == DEBUG_)
+        {
             int h = t_flit->get_route().hops_traversed;
-            printf("  DEBUG FLIT. Hops = %d\n", h);
+            printf("Debug flit arrives at router %d. Hops = %d\n", my_id, h);
             assert(m_vcs[vc]->get_state() == IDLE_);
             set_vc_active(vc, m_router->curCycle());
-            if(h > 1){
-                printf("This is a router neighbouring the faulty router.\n");
+            if(h > 1)
+            {
+                printf("Allowed hopcount exceeded at router %d. Fault router: %d\n", my_id, t_flit->get_route().src_router);
+                return;
             }
-            else if(h == 1){
-                if(t_flit->get_route().dest_router == my_id){
-                    //if we have already sent a debug pulse, we stop here.
-                    delete t_flit;
-                    //its job is done
-                    if(m_router->m_debug_pulses == 1){
-                        m_router->schedule_wakeup(Cycles( m_router->curCycle() + Cycles(1) )); //wakeup the router in the next cycle
+            // else if(h <= 1){
+            if(t_flit->get_route().dest_router == my_id)
+            {
+                printf("Debug flit has reached the destination, deleting it.\n");
+
+                delete t_flit;
+                //its job is done
+
+                //if we have already sent a debug pulse, we stop here.
+                if(m_router->m_debug_flits_sent != 1)
+                {
+                    int rt_dest = my_id + 1, lt_dest = my_id - 1, b_dest = my_id - num_cols;
+                    if(my_id == fault_router_id)   //HT acting on debug flits that it sends
+                    {
+                        printf("infecting DEBUG FLITS at fault router: %d\n",fault_router_id);
+                        rt_dest = (num_rows * num_cols) + (rt_dest % num_cols); // these are modified destinations
+                        lt_dest = (num_rows * num_cols) + (lt_dest % num_cols); // at the faulty router
+                        b_dest = (num_rows * num_cols) + (b_dest % num_cols);
                     }
-                    else{
-                        //send flits and mark that we have sent flits once.
-                        //generate flits
-                        if(my_id != (num_cols*num_rows)-1){
-                            //schedule a flit to send right
-                            RouteInfo rt_right;
-                            rt_right.vnet = vc/m_vc_per_vnet;
-                            // rt_right.net_dest = new_net_msg_ptr->getDestination();
-                            // rt_right.src_ni = m_id;
-                            rt_right.src_router = my_id;
-                            // rt_right.dest_ni = destID;
-                            rt_right.dest_router = my_id + 1;
+                    //generate flits
+                    // if(my_id != (num_cols*num_rows)-1){
+                    //     //schedule a flit to send right
+                    //     id -1
+                    // }
+                    // if(my_id != num_cols*(num_rows-1)){
+                    //     //schedule a flit to send left
+                    //     id -2
+                    // }
+                    if(my_id >= num_cols)
+                    {
+                        //send a flit to bottom
+                        RouteInfo rt_bottom;
+                        rt_bottom.vnet = vc/m_vc_per_vnet;
+                        // rt_bottom.net_dest = new_net_msg_ptr->getDestination();
+                        rt_bottom.src_ni = my_id;
+                        rt_bottom.src_router = my_id;
+                        rt_bottom.dest_ni = num_cols * num_cols + rt_bottom.dest_router;
+                        rt_bottom.dest_router = b_dest;
 
-                            int fid = my_id*(-100) + (-1);  //will help to identify the flit
-                            flit *fl_right = new flit(fid, -1, vc, vc/m_vc_per_vnet, rt_right, 1, NULL,
-                            m_router->curCycle());
-                            m_in_link->flit_push_back_debug(fl_right);
+                        int fid = my_id*(-100) + (-3);  //will help to identify the flit
+                        flit *fl_bottom = new flit(fid, -3, vc, vc/m_vc_per_vnet, rt_bottom, 1, NULL,
+                        m_router->curCycle());
+                        outport = m_router->route_compute(fl_bottom, m_id, m_direction);
+                        grant_outport(vc, outport);
+                        m_vcs[vc]->insertFlit(t_flit);
+                        printf("debug flit (id %d) sent %d -> %d\n", fid, my_id, rt_bottom.dest_router);
+
+                        int vnet = vc/m_vc_per_vnet;
+                        // number of writes same as reads
+                        // any flit that is written will be read only once
+                        m_num_buffer_writes[vnet]++;
+                        m_num_buffer_reads[vnet]++;
+
+                        Cycles pipe_stages = m_router->get_pipe_stages();
+                        if (pipe_stages == 1) {
+                            // 1-cycle router
+                            // Flit goes for SA directly
+                            t_flit->advance_stage(SA_, m_router->curCycle());
+                        } else {
+                            assert(pipe_stages > 1);
+                            // Router delay is modeled by making flit wait in buffer for
+                            // (pipe_stages cycles - 1) cycles before going for SA
+
+                            Cycles wait_time = pipe_stages - Cycles(1);
+                            fl_bottom->advance_stage(SA_, m_router->curCycle() + wait_time);
+
+                            // Wakeup the router in that cycle to perform SA
+                            m_router->schedule_wakeup(Cycles(wait_time));
                         }
-                        if(my_id != num_cols*(num_rows-1)){
-                            //schedule a flit to send left
-                            RouteInfo rt_left;
-                            rt_left.vnet = vc/m_vc_per_vnet;
-                            // rt_left.net_dest = new_net_msg_ptr->getDestination();
-                            // rt_left.src_ni = m_id;
-                            rt_left.src_router = my_id;
-                            // rt_left.dest_ni = destID;
-                            rt_left.dest_router = my_id - 1;
-
-                            int fid = my_id*(-100) + (-2);  //will help to identify the flit
-                            flit *fl_left = new flit(fid, -2, vc, vc/m_vc_per_vnet, rt_left, 1, NULL,
-                            m_router->curCycle());
-                            m_in_link->flit_push_back_debug(fl_left);
-                        }
-                        if(my_id >= num_cols){
-                            //send a flit to bottom
-                            RouteInfo rt_bottom;
-                            rt_bottom.vnet = vc/m_vc_per_vnet;
-                            // rt_bottom.net_dest = new_net_msg_ptr->getDestination();
-                            // rt_bottom.src_ni = m_id;
-                            rt_bottom.src_router = my_id;
-                            // rt_bottom.dest_ni = destID;
-                            rt_bottom.dest_router = my_id - num_cols;
-
-                            int fid = my_id*(-100) + (-3);  //will help to identify the flit
-                            flit *fl_bottom = new flit(fid, -3, vc, vc/m_vc_per_vnet, rt_bottom, 1, NULL,
-                            m_router->curCycle());
-                            outport = m_router->route_compute(fl_bottom, m_id, m_direction);
-                            grant_outport(vc, outport);
-                            m_vcs[vc]->insertFlit(t_flit);
-
-
-                            int vnet = vc/m_vc_per_vnet;
-                            // number of writes same as reads
-                            // any flit that is written will be read only once
-                            m_num_buffer_writes[vnet]++;
-                            m_num_buffer_reads[vnet]++;
-
-                            Cycles pipe_stages = m_router->get_pipe_stages();
-                            if (pipe_stages == 1) {
-                                // 1-cycle router
-                                // Flit goes for SA directly
-                                t_flit->advance_stage(SA_, m_router->curCycle());
-                            } else {
-                                assert(pipe_stages > 1);
-                                // Router delay is modeled by making flit wait in buffer for
-                                // (pipe_stages cycles - 1) cycles before going for SA
-
-                                Cycles wait_time = pipe_stages - Cycles(1);
-                                fl_bottom->advance_stage(SA_, m_router->curCycle() + wait_time);
-
-                                // Wakeup the router in that cycle to perform SA
-                                m_router->schedule_wakeup(Cycles(wait_time));
-                            }
-                        }
-                        m_router->m_debug_pulses = 1;
-                        return;
+                    }
+                    else
+                    {
+                        // at the bottom edge, dont send more flits.
+                        printf("Reached the other edge, not sending flit to bottom.\n");
                     }
                 }
-                else{
-                    // route_compute and send it
-                    outport = m_router->route_compute(t_flit,
-                        m_id, m_direction);
-                    grant_outport(vc, outport);
-                    m_vcs[vc]->insertFlit(t_flit);
-                    int vnet = vc/m_vc_per_vnet;
-                    // number of writes same as reads
-                    // any flit that is written will be read only once
-                    m_num_buffer_writes[vnet]++;
-                    m_num_buffer_reads[vnet]++;
+                // Flit sending done.
 
-                    Cycles pipe_stages = m_router->get_pipe_stages();
-                    if (pipe_stages == 1) {
-                        // 1-cycle router
-                        // Flit goes for SA directly
-                        t_flit->advance_stage(SA_, m_router->curCycle());
-                    } else {
-                        assert(pipe_stages > 1);
-                        // Router delay is modeled by making flit wait in buffer for
-                        // (pipe_stages cycles - 1) cycles before going for SA
-
-                        Cycles wait_time = pipe_stages - Cycles(1);
-                        t_flit->advance_stage(SA_, m_router->curCycle() + wait_time);
-
-                        // Wakeup the router in that cycle to perform SA
-                        m_router->schedule_wakeup(Cycles(wait_time));
-                    }
-                    return;
-                }
+                //mark that we have sent flits once.
+                m_router->m_debug_flits_sent = 1;
+                return;
             }
+            else
+            {       // flit isn't at destination.
+                    // route_compute and send it.
+                printf("Debug flit not at the destination, need to send it further...\n");
+                outport = m_router->route_compute(t_flit,
+                    m_id, m_direction);
+                grant_outport(vc, outport);
+                m_vcs[vc]->insertFlit(t_flit);
 
+                int vnet = vc/m_vc_per_vnet;
+                // number of writes same as reads
+                // any flit that is written will be read only once
+                m_num_buffer_writes[vnet]++;
+                m_num_buffer_reads[vnet]++;
+
+                Cycles pipe_stages = m_router->get_pipe_stages();
+                if (pipe_stages == 1) {
+                    // 1-cycle router
+                    // Flit goes for SA directly
+                    t_flit->advance_stage(SA_, m_router->curCycle());
+                } else {
+                    assert(pipe_stages > 1);
+                    // Router delay is modeled by making flit wait in buffer for
+                    // (pipe_stages cycles - 1) cycles before going for SA
+
+                    Cycles wait_time = pipe_stages - Cycles(1);
+                    t_flit->advance_stage(SA_, m_router->curCycle() + wait_time);
+
+                    // Wakeup the router in that cycle to perform SA
+                    m_router->schedule_wakeup(Cycles(wait_time));
+                }
+                return;
+            }
         }
-        if ((t_flit->get_type() == HEAD_) ||
-            (t_flit->get_type() == HEAD_TAIL_)) {
+        else if ((t_flit->get_type() == HEAD_) || (t_flit->get_type() == HEAD_TAIL_))
+        {
 
             assert(m_vcs[vc]->get_state() == IDLE_);
             set_vc_active(vc, m_router->curCycle());
@@ -233,9 +234,8 @@ InputUnit::wakeup()
 
             RouteInfo route = t_flit->get_route();
             
-            int fault_router_id = m_router->get_net_ptr()->getfaultrouter();
             if(my_id == fault_router_id){
-                printf("infecting at fault router: %d\n",fault_router_id);
+                // printf("infecting at fault router: %d\n",fault_router_id);
                 route.dest_router = (num_rows * num_cols) + (route.dest_router % num_cols);
                 t_flit->set_route(route);
             }
@@ -245,63 +245,66 @@ InputUnit::wakeup()
             if(outport == -1){  /* Instead of re-insertion,
                                    we can just accept the packet at this router, drop it,
                                    and then send detection signals*/
+                if(m_router->m_fault_detected == 1){
+                    // printf("fault already detected at router %d, not doing anything.\n", my_id);
+                    return;
+                }
 
-                // route.dest_router = my_id;
                 // t_flit->set_route(route);
                 // printf("VC Number: %d\n", vc);
                 // t_flit->set_vc(vc);
-                printf("Accepting a bad flit at the edge router %d\n", my_id);
+                m_router->m_fault_detected = 1;
+                printf("--- First infected flit at edge router %d ---\n", my_id);
                 update_blocked_vcs(vc); // for displaying
                 // outport = m_router->route_compute(t_flit, m_id, m_direction);
                 
                 //generate flits
-                if(my_id != (num_cols*num_rows)-1){
-                    //schedule a flit to send right
-                    RouteInfo rt_right;
-                    rt_right.vnet = vc/m_vc_per_vnet;
-                    // rt_right.net_dest = new_net_msg_ptr->getDestination();
-                    // rt_right.src_ni = m_id;
-                    rt_right.src_router = my_id;
-                    // rt_right.dest_ni = destID;
-                    rt_right.dest_router = my_id + 1;
+                // if(my_id != (num_cols*num_rows)-1){
+                //     //schedule a flit to send right
+                //     RouteInfo rt_right;
+                //     rt_right.vnet = vc/m_vc_per_vnet;
+                //     // rt_right.net_dest = new_net_msg_ptr->getDestination();
+                //     rt_right.src_ni = my_id;
+                //     rt_right.src_router = my_id;
+                //     rt_right.dest_ni = num_cols * num_cols + rt_right.dest_router;
+                //     rt_right.dest_router = my_id + 1;
 
-                    int fid = my_id*(-100) + (-1);  //will help to identify the flit
-                    flit *fl_right = new flit(fid, -1, vc, vc/m_vc_per_vnet, rt_right, 1, NULL,
-                    m_router->curCycle());
-                    m_in_link->flit_push_back_debug(fl_right);
-                }
-                if(my_id != num_cols*(num_rows-1)){
-                    //schedule a flit to send left
-                    RouteInfo rt_left;
-                    rt_left.vnet = vc/m_vc_per_vnet;
-                    // rt_left.net_dest = new_net_msg_ptr->getDestination();
-                    // rt_left.src_ni = m_id;
-                    rt_left.src_router = my_id;
-                    // rt_left.dest_ni = destID;
-                    rt_left.dest_router = my_id - 1;
+                //     int fid = my_id*(-100) + (-1);  //will help to identify the flit
+                //     flit *fl_right = new flit(fid, -1, vc, vc/m_vc_per_vnet, rt_right, 1, NULL,
+                //         m_router->curCycle());
+                //     printf("A debug flit sent, ID: %d\n", fid);
+                    
+                //     m_in_link->flit_push_back_debug(fl_right);
+                // }
+                // if(my_id != num_cols*(num_rows-1)){
 
-                    int fid = my_id*(-100) + (-2);  //will help to identify the flit
-                    flit *fl_left = new flit(fid, -2, vc, vc/m_vc_per_vnet, rt_left, 1, NULL,
-                    m_router->curCycle());
-                    m_in_link->flit_push_back_debug(fl_left);
-                }
+                //     // schedule a flit to send left
+
+                //     // similarly to left
+                // }
+
                 //send a flit to bottom
+
+                // Fill RouteInfo entries
                 RouteInfo rt_bottom;
                 rt_bottom.vnet = vc/m_vc_per_vnet;
                 // rt_bottom.net_dest = new_net_msg_ptr->getDestination();
-                // rt_bottom.src_ni = m_id;
+                rt_bottom.src_ni = my_id;
                 rt_bottom.src_router = my_id;
-                // rt_bottom.dest_ni = destID;
+                rt_bottom.dest_ni = num_cols * num_cols + rt_bottom.dest_router;
                 rt_bottom.dest_router = my_id - num_cols;
+
+                printf("sending debug flit to router %d...\n", rt_bottom.dest_router);
 
                 int fid = my_id*(-100) + (-3);  //will help to identify the flit
                 flit *fl_bottom = new flit(fid, -3, vc, vc/m_vc_per_vnet, rt_bottom, 1, NULL,
-                m_router->curCycle());
+                    m_router->curCycle());
                 outport = m_router->route_compute(fl_bottom, m_id, m_direction);
                 grant_outport(vc, outport);
                 m_vcs[vc]->insertFlit(t_flit);
+                printf("debug flit (id %d) sent %d -> %d\n", fid, my_id, rt_bottom.dest_router);
 
-                m_router->m_debug_pulses = 1;
+                m_router->m_debug_flits_sent = 1;
 
                 int vnet = vc/m_vc_per_vnet;
                 // number of writes same as reads
@@ -334,20 +337,22 @@ InputUnit::wakeup()
             grant_outport(vc, outport);
             
         } else {
+            // for body flit
             assert(m_vcs[vc]->get_state() == ACTIVE_);
+
             // if(outport == -1){
             //     outport = 2;
             // }
         }
 
-            // Buffer the flit
-            m_vcs[vc]->insertFlit(t_flit);
-            // printf("Inserted the flit in VC %d\n",vc);
-            int vnet = vc/m_vc_per_vnet;
-            // number of writes same as reads
-            // any flit that is written will be read only once
-            m_num_buffer_writes[vnet]++;
-            m_num_buffer_reads[vnet]++;
+        // Buffer the flit
+        m_vcs[vc]->insertFlit(t_flit);
+        // printf("Inserted the flit in VC %d\n",vc);
+        int vnet = vc/m_vc_per_vnet;
+        // number of writes same as reads
+        // any flit that is written will be read only once
+        m_num_buffer_writes[vnet]++;
+        m_num_buffer_reads[vnet]++;
 
         if(outport != -1){
             Cycles pipe_stages = m_router->get_pipe_stages();

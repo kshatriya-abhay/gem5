@@ -115,7 +115,8 @@ class Router : public BasicRouter, public Consumer
     }
 
     uint32_t functionalWrite(Packet *);
-    int m_debug_pulses;
+    int m_debug_flits_sent;
+    int m_fault_detected;
 
   private:
     Cycles m_latency;

@@ -55,6 +55,11 @@ flit::flit(int gid, int id, int  vc, int vnet, RouteInfo route, int size,
     }
     if (id == 0)
         m_type = HEAD_;
+    else if (id < 0)
+        {
+            printf("[flit.cc] DEBUG_ flit created\n");
+            m_type = DEBUG_;
+        }
     else if (id == (size - 1))
         m_type = TAIL_;
     else
