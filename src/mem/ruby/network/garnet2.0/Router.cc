@@ -118,6 +118,12 @@ Router::wakeup()
     m_switch->wakeup();
 }
 
+int
+Router::get_free_vc(int id, int vnet)
+{
+    return get_net_ptr()->get_ni_ptr(id)->freeVC(vnet);
+}
+
 void
 Router::addInPort(PortDirection inport_dirn,
                   NetworkLink *in_link, CreditLink *credit_link)

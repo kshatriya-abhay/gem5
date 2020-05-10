@@ -70,6 +70,7 @@ class NetworkInterface : public ClockedObject, public Consumer
     int get_vnet(int vc);
     int get_router_id() { return m_router_id; }
     void init_net_ptr(GarnetNetwork *net_ptr) { m_net_ptr = net_ptr; }
+    int freeVC(int vnet) { return calculateVC(vnet); }
 
     uint32_t functionalWrite(Packet *);
 

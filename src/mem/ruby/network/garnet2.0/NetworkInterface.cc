@@ -294,7 +294,7 @@ NetworkInterface::flitisizeMessage(MsgPtr msg_ptr, int vnet)
         for (int i = 0; i < num_flits; i++) {
             m_net_ptr->increment_injected_flits(vnet);
             flit *fl = new flit(gid_counter, i, vc, vnet, route, num_flits, new_msg_ptr,
-                curCycle());
+                curCycle(), false);
             gid_counter++;
             fl->set_src_delay(curCycle() - ticksToCycles(msg_ptr->getTime()));
             m_ni_out_vcs[vc]->insert(fl);

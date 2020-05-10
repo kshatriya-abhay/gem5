@@ -35,7 +35,7 @@
 
 // Constructor for the flit
 flit::flit(int gid, int id, int  vc, int vnet, RouteInfo route, int size,
-    MsgPtr msg_ptr, Cycles curTime)
+    MsgPtr msg_ptr, Cycles curTime, bool is_debug)
 {
     global_id = gid;
     m_size = size;
@@ -48,6 +48,7 @@ flit::flit(int gid, int id, int  vc, int vnet, RouteInfo route, int size,
     m_route = route;
     m_stage.first = I_;
     m_stage.second = m_time;
+    m_is_debug = is_debug;
 
     if (size == 1) {
         m_type = HEAD_TAIL_;
@@ -55,11 +56,6 @@ flit::flit(int gid, int id, int  vc, int vnet, RouteInfo route, int size,
     }
     if (id == 0)
         m_type = HEAD_;
-    else if (id < 0)
-        {
-            printf("[flit.cc] DEBUG_ flit created\n");
-            m_type = DEBUG_;
-        }
     else if (id == (size - 1))
         m_type = TAIL_;
     else

@@ -94,6 +94,7 @@ class Router : public BasicRouter, public Consumer
     int route_compute(flit* t_flit, int inport, PortDirection direction);
     void grant_switch(int inport, flit *t_flit);
     void schedule_wakeup(Cycles time);
+    int get_free_vc(int id, int vnet);
 
     std::string getPortDirectionName(PortDirection direction);
     void printFaultVector(std::ostream& out);
