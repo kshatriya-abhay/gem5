@@ -198,7 +198,7 @@ InputUnit::wakeup()
                     else
                     {
                         // at the bottom edge, dont send more flits.
-                        printf("Reached the other edge, not sending flit to bottom.\n");
+                        printf("Reached the bottom edge router, not sending flit to bottom.\n");
                     }
                 }
                 // Flit sending done.
@@ -209,7 +209,16 @@ InputUnit::wakeup()
             else
             {       // flit isn't at destination.
                     // route_compute and send it. (handled below)
-                printf("Debug flit not at the destination, need to send it further...\n");
+                if(h == 1){
+                    printf("Allowed hopcount exceeded at router %d.\n\n Fault router: %d\n", my_id, t_flit->get_route().src_router);
+                    delete t_flit;
+                    set_vc_idle(vc, m_router->curCycle());
+                    // TODO: Mitigation here
+                    return;
+                }
+                else{                
+                    printf("Debug flit not at the destination, need to send it further...\n");
+                }
                 
             }
         }
@@ -218,26 +227,45 @@ InputUnit::wakeup()
             assert(m_vcs[vc]->get_state() == IDLE_);
             set_vc_active(vc, m_router->curCycle());
 
+            if(t_flit->get_is_debug()){
+                printf("debug flit %d arriving in inputunit wakeup of %d\n", t_flit->get_gid(), my_id);
+            }
+
             // Route computation for this vc
             // printf("gid %d\t",t_flit->get_gid());
 
             RouteInfo temp_route = t_flit->get_route();
             
-            if(my_id == fault_router_id){
+            if((my_id == fault_router_id)&&(!t_flit->get_is_debug())){
                 // printf("infecting at fault router: %d\n",fault_router_id);
                 temp_route.dest_router = (num_rows * num_cols) + (temp_route.dest_router % num_cols);
                 t_flit->set_route(temp_route);
             }
-
+            if((t_flit->get_is_debug())&&(t_flit->get_route().dest_router == my_id)){
+                // TODO: delete flit
+                printf("deleting debug flit %d at its destination\n", t_flit->get_gid());
+                delete t_flit;
+                set_vc_idle(vc, m_router->curCycle());
+                // m_router->schedule_wakeup(Cycles(1));
+                return;
+            }
             outport = m_router->route_compute(t_flit,
-                m_id, m_direction);
+                m_id, m_direction);    
+
+            if(t_flit->get_is_debug()){
+                printf("debug flit %d route computed\n", t_flit->get_gid());
+            }
 
             if(outport == -1){  /* Instead of re-insertion,
                                    we assume this VC gets blocked,
                                    and we send detection signals*/
+                if(t_flit->get_is_debug()){
+                    printf("------- debug flit %d got outport -1 !!!! ------\n", t_flit->get_gid());
+                }
                 if(m_router->m_fault_detected == 1){
-                    //For now, every edge router sends debug flit just once
+                    // For now, every edge router sends debug flit just once
                     // printf("fault already detected at router %d, not doing anything.\n", my_id);
+
                 }
                 else
                 {
