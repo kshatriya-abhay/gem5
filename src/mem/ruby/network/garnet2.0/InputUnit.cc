@@ -144,92 +144,113 @@ InputUnit::wakeup()
         int my_id = m_router->get_id();
         t_flit->increment_hops(); // for stats
 
-        if (t_flit->get_is_debug())
-        {
-            int h = t_flit->get_route().hops_traversed;
-            printf("Debug flit %d arrives at router %d. Hops = %d\n", t_flit->get_gid(), my_id, h);
-            
-            if(h > 1)
-            {
-                printf("Allowed hopcount exceeded at router %d. Fault router: %d\n", my_id, t_flit->get_route().src_router);
-
-                // here we can trigger some action
-
-                return;
-            }
-            if(t_flit->get_route().dest_router == my_id)
-            {
-                printf("Debug flit %d has reached the destination.\n", t_flit->get_gid());
-
-                //if we have already sent debug flits, we dont do it again.
-                if(m_router->m_debug_flits_sent != 1)
-                {
-                    int east_dest = my_id + 1, west_dest = my_id - 1, south_dest = my_id - num_cols;
-
-                    if(my_id == fault_router_id)   //HT acting on debug flits that it sends
-                    {
-                        printf("infecting DEBUG FLITS at fault router: %d\n",fault_router_id);
-                        east_dest = (num_rows * num_cols) + (east_dest % num_cols); // these are modified destinations
-                        west_dest = (num_rows * num_cols) + (west_dest % num_cols); // at the faulty router
-                        south_dest = (num_rows * num_cols) + (south_dest % num_cols);
-                    }
-                    //generate flits
-                    // if(my_id != (num_cols*num_rows)-1){
-                    //     //schedule a flit to send right
-                    // }
-                    // if(my_id != num_cols*(num_rows-1)){
-                    //     //schedule a flit to send left
-                    // }
-                    if(my_id >= num_cols)
-                    {
-                        //send a flit to bottom
-                        flit* south_flit = generate_debug_flit(south_dest);
-                        printf("debug flit (id %d) generated %d -> %d\n", south_flit->get_gid(), my_id, south_dest);
-                        m_in_link->flit_push_back_debug(south_flit);
-                        printf("debug flit pushed to top of link.\n");
-
-                        // test
-                        flit* temp_flit = m_in_link->peekLink();
-                        printf("gid of flit at top: %d\n", temp_flit->get_gid());
-
-                        // To ensure that the next flit goes in the next clock cycle
-                        m_router->schedule_wakeup(Cycles(1));
-                    }
-                    else
-                    {
-                        // at the bottom edge, dont send more flits.
-                        printf("Reached the bottom edge router, not sending flit to bottom.\n");
-                    }
-                }
-                // Flit sending done.
-
-                //mark that we have sent flits once.
-                m_router->m_debug_flits_sent = 1;
-            }
-            else
-            {       // flit isn't at destination.
-                    // route_compute and send it. (handled below)
-                if(h == 1){
-                    printf("Allowed hopcount exceeded at router %d.\n\n Fault router: %d\n", my_id, t_flit->get_route().src_router);
-                    delete t_flit;
-                    set_vc_idle(vc, m_router->curCycle());
-                    // TODO: Mitigation here
-                    return;
-                }
-                else{                
-                    printf("Debug flit not at the destination, need to send it further...\n");
-                }
-                
-            }
-        }
         if ((t_flit->get_type() == HEAD_) || (t_flit->get_type() == HEAD_TAIL_))
         {
+            if (t_flit->get_is_debug())
+            {
+                int h = t_flit->get_route().hops_traversed;
+                printf("Debug flit %d arrives at router %d. Hops = %d . VC %d ", t_flit->get_gid(), my_id, h, vc);
+                cout << "at cycle " << m_router->curCycle();
+                printf("\n");
+                
+                // if(h > 1)
+                // {
+                //     printf("Allowed hopcount exceeded at router %d. Fault router: %d\n", my_id, t_flit->get_route().src_router);
+
+                //     // here we can trigger some action
+
+                //     return;
+                // }
+                if(t_flit->get_route().dest_router == my_id)
+                {
+                    printf("Debug flit %d has reached the destination.\n", t_flit->get_gid());
+
+                    //if we have already sent debug flits, we dont do it again.
+                    if(m_router->m_debug_flits_sent != 1)
+                    {
+                        int north_dest = my_id + num_cols, east_dest = my_id + 1, 
+                            south_dest = my_id - num_cols, west_dest = my_id - 1;
+
+                        if(my_id == fault_router_id)   //HT acting on debug flits that it sends
+                        {
+                            printf("infecting DEBUG FLITS at fault router: %d\n",fault_router_id);
+                            north_dest = (num_rows * num_cols) + (north_dest % num_cols); 
+                            east_dest = (num_rows * num_cols) + (east_dest % num_cols); // these are modified destinations
+                            west_dest = (num_rows * num_cols) + (west_dest % num_cols); // at the faulty router
+                            south_dest = (num_rows * num_cols) + (south_dest % num_cols);
+                        }
+                        //generate flits
+                        if(my_id < num_cols*(num_rows-1)){
+                            //schedule a flit to send to north
+                            flit* north_flit = generate_debug_flit(north_dest);
+                            printf("debug flit (id %d) generated %d -> %d\n", north_flit->get_gid(), my_id, north_dest);
+                            m_in_link->flit_push_back_debug(north_flit);
+                            // To ensure that the next flit goes in the next clock cycle
+                            m_router->schedule_wakeup(Cycles(4));
+                        }
+                        if(my_id % num_cols != num_cols-1){
+                            //schedule a flit to send east
+                            flit* east_flit = generate_debug_flit(east_dest);
+                            printf("debug flit (id %d) generated %d -> %d\n", east_flit->get_gid(), my_id, east_dest);
+                            m_in_link->flit_push_back_debug(east_flit);
+                            // To ensure that the next flit goes in the next clock cycle
+                            m_router->schedule_wakeup(Cycles(3));
+                        }
+                        if(my_id % num_cols != 0){
+                            //schedule a flit to send west
+                            flit* west_flit = generate_debug_flit(west_dest);
+                            printf("debug flit (id %d) generated %d -> %d\n", west_flit->get_gid(), my_id, west_dest);
+                            m_in_link->flit_push_back_debug(west_flit);
+                            // To ensure that the next flit goes in the next clock cycle
+                            m_router->schedule_wakeup(Cycles(2));
+                        }
+                        if(my_id >= num_cols)
+                        {
+                            //send a flit to bottom
+                            flit* south_flit = generate_debug_flit(south_dest);
+                            printf("debug flit (id %d) generated %d -> %d\n", south_flit->get_gid(), my_id, south_dest);
+                            m_in_link->flit_push_back_debug(south_flit);
+                            // printf("debug flit pushed to top of link.\n");
+
+                            // test
+                            // flit* temp_flit = m_in_link->peekLink();
+                            // printf("gid of flit at top: %d\n", temp_flit->get_gid());
+
+                            // To ensure that the next flit goes in the next clock cycle
+                            m_router->schedule_wakeup(Cycles(1));
+                        }
+                        else
+                        {
+                            // at the bottom edge, dont send more flits.
+                            printf("Reached the bottom edge router, not sending flit to bottom.\n");
+                        }
+                    }
+                    // Flit sending done.
+
+                    //mark that we have sent flits once.
+                    m_router->m_debug_flits_sent = 1;
+                }
+                else
+                {       // flit isn't at destination.
+                        // route_compute and send it. (handled below)
+                    if(h == 1){
+                        printf("Allowed hopcount exceeded at router %d.\n\n Fault router identified: %d\n\n", my_id, t_flit->get_route().src_router);
+                        delete t_flit;
+                        set_vc_idle(vc, m_router->curCycle());
+                        // TODO: Mitigation here
+                        return;
+                    }
+                    else{                
+                        printf("Debug flit not at the destination, need to send it further...\n");
+                    }
+                    
+                }
+            }
+            if(m_vcs[vc]->get_state() != IDLE_){
+                cout << "Assert failed at " << my_id <<" flit "<< t_flit->get_gid() <<" vc "<< vc <<"\n";
+            }
             assert(m_vcs[vc]->get_state() == IDLE_);
             set_vc_active(vc, m_router->curCycle());
-
-            if(t_flit->get_is_debug()){
-                printf("debug flit %d arriving in inputunit wakeup of %d\n", t_flit->get_gid(), my_id);
-            }
 
             // Route computation for this vc
             // printf("gid %d\t",t_flit->get_gid());
@@ -270,32 +291,43 @@ InputUnit::wakeup()
                 else
                 {
                     m_router->m_fault_detected = 1;
-                    printf("--- First infected flit at edge router %d ---\n", my_id);
-    
-                    //generate flits
-                    // if(my_id != (num_cols*num_rows)-1){
-                    //     //schedule a flit to send east
-                    // }
-    
-                    // if(my_id != num_cols*(num_rows-1)){
-                    //     // schedule a flit to send west
-                    // }
-                        
+                    printf("--- First infected flit at edge router %d ", my_id);
+                    cout << "at cycle " << m_router->curCycle() <<" ---\n";
+
+                    //sending flits (dont need to send to north here)
+                    int east_dest = my_id + 1, south_dest = my_id - num_cols, 
+                        west_dest = my_id - 1;
+                    if(my_id % num_cols != num_cols-1){
+                        //schedule a flit to send east
+                        flit* east_flit = generate_debug_flit(east_dest);
+                        printf("debug flit (id %d) generated %d -> %d\n", east_flit->get_gid(), my_id, east_dest);
+                        m_in_link->flit_push_back_debug(east_flit);
+                        // To ensure that the next flit goes in the next clock cycle
+                        m_router->schedule_wakeup(Cycles(3));
+                    }
+                    if(my_id % num_cols != 0){
+                        //schedule a flit to send west
+                        flit* west_flit = generate_debug_flit(west_dest);
+                        printf("debug flit (id %d) generated %d -> %d\n", west_flit->get_gid(), my_id, west_dest);
+                        m_in_link->flit_push_back_debug(west_flit);
+                        // To ensure that the next flit goes in the next clock cycle
+                        m_router->schedule_wakeup(Cycles(2));
+                    }                        
                     if(my_id >= num_cols){
                         // schedule a flit to send south
-                        int south_dest = my_id - num_cols;
                         flit* south_flit = generate_debug_flit(south_dest);
                         printf("debug flit (id %d) created. %d -> %d\n", south_flit->get_gid(), my_id, south_dest);
                         m_in_link->flit_push_back_debug(south_flit);
-                        printf("debug flit pushed to top of link.\n");
+                        // printf("debug flit pushed to top of link.\n");
 
                         // test
-                        flit* temp_flit = m_in_link->peekLink();
-                        printf("gid of flit at top: %d\n", temp_flit->get_gid());
+                        // flit* temp_flit = m_in_link->peekLink();
+                        // printf("gid of flit at top: %d\n", temp_flit->get_gid());
+
+                        // To ensure that the next flit goes in the next clock cycle
+                        m_router->schedule_wakeup(Cycles(1));
                     }
 
-                    // To ensure that the next flit goes in the next clock cycle
-                    m_router->schedule_wakeup(Cycles(1));
     
                     m_router->m_debug_flits_sent = 1;
                 }
