@@ -78,6 +78,9 @@ Router::init()
     BasicRouter::init();
     m_debug_flits_sent = 0;
     m_fault_detected = 0;
+    m_debug_flits_count = 0;
+    m_waiting_for_debug_flits = false;
+    m_detected_ht_id = -1;
     m_sw_alloc->init();
     m_switch->init();
 }
@@ -90,6 +93,21 @@ Router::wakeup()
     // check for incoming flits
     int M5_VAR_USED num_rows = get_net_ptr()->getNumRows();
     int num_cols = get_net_ptr()->getNumCols();
+
+    if(m_waiting_for_debug_flits){
+        int threshold = num_cols*num_rows*2;
+        if(curCycle() > (first_debug_flit_arrived + Cycles(threshold))){
+            m_waiting_for_debug_flits = false;
+            cout << "R " << m_id << "checking ";
+            if(m_debug_flits_count > debug_flit_rcv_count()){
+                cout << "FAIL\n";
+                m_detected_ht_id = 0;
+            }
+            else{
+                cout << "PASS\n";
+            }
+        }
+    }
 
     if(m_id >= num_cols*(num_rows - 1)){
         for (int inport = 0; inport < m_input_unit.size(); inport++) {

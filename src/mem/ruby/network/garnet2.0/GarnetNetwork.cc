@@ -160,6 +160,12 @@ GarnetNetwork::init()
 
 GarnetNetwork::~GarnetNetwork()
 {
+    for(int i = 0; i < m_routers.size(); i++){
+        int id = m_routers[i] -> m_detected_ht_id;
+        if(m_routers[i] -> m_detected_ht_id != -1){
+            cout << "Detected HT " << id << " at router " << m_routers[i]->get_id() << "\n";
+        }
+    }
     deletePointers(m_routers);
     deletePointers(m_nis);
     deletePointers(m_networklinks);
